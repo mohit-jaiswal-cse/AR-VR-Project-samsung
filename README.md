@@ -2,7 +2,7 @@
 
 Before you begin, ensure you have met the following requirements:
 
-- **Operating System**: Linux or Windos
+- **Operating System**: Linux or Windows
 - **Programming Language**: Python 3
 - **Libraries**: PyTorch
 - **Hardware**:
