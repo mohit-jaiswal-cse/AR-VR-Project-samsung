@@ -77,7 +77,7 @@ class DenseNet(nn.Module):
         growth_rate=12, block_config=(16, 16, 16), compression=0.5,num_init_features=24
         , bn_size=4, drop_rate=0, avgpool_size=8,
     """
-    def __init__(self, growth_rate=12, block_config=(16, 16, 16), compression=0.5,
+    def __init__(self, num_classes=1024, growth_rate=12, block_config=(16, 16, 16), compression=0.5,
                  num_init_features=24, bn_size=4, drop_rate=0, avgpool_size=4):
         super(DenseNet, self).__init__()
 
@@ -105,7 +105,7 @@ class DenseNet(nn.Module):
 
             # check whether the current block is the last block
             # Add a transition layer to all Denseblocks except the last
-            if i != len(block_config):
+            if i != len(block_config) - 1:
                 # Reduce the number of output features in the transition layer
 
                 nOutChannels = int(math.floor(num_features*compression))
@@ -119,12 +119,13 @@ class DenseNet(nn.Module):
             # Final batch norm
             self.features.add_module('last_norm%d' % (i+1), nn.BatchNorm2d(num_features))
 
+        self.num_features = num_features
         # Linear layer
-        self.fc = nn.Linear(8208, 1024)
-        self.fc_dist = nn.Linear(1024, 96)  # 12,12,32
-        self.fc_intensity = nn.Linear(1024, 1)
-        self.fc_rgb_ratio = nn.Linear(1024, 3)
-        self.fc_ambient = nn.Linear(1024, 3)
+        self.fc = nn.Linear(num_features, num_classes)
+        self.fc_dist = nn.Linear(num_classes, 96)  # 12,12,32
+        self.fc_intensity = nn.Linear(num_classes, 1)
+        self.fc_rgb_ratio = nn.Linear(num_classes, 3)
+        self.fc_ambient = nn.Linear(num_classes, 3)
         self.sigmoid = nn.Sigmoid()
         self.tanh = nn.Tanh()
         self.softmax = nn.Softmax(dim=1)
@@ -133,7 +134,7 @@ class DenseNet(nn.Module):
     def forward(self, x):
         features = self.features(x)
         out = F.relu(features, inplace=True)
-        out = F.avg_pool2d(out, kernel_size=self.avgpool_size).view(features.size(0), -1)
+        out = F.avg_pool2d(out, kernel_size=self.avgpool_size).view(-1, self.num_features)
         out = self.fc(out)
 
         dist_pred = self.fc_dist(out)
